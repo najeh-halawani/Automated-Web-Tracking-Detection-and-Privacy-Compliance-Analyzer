@@ -1,7 +1,7 @@
 '''
 Author: Najeh Halawani
 -----
-Last Modified: Sunday, 2nd November 2025 6:41:22 pm
+Last Modified: Sunday, 2nd November 2025 7:38:48 pm
 Modified By: Najeh Halawani
 -----
 '''
@@ -58,8 +58,8 @@ def run_accept(domain: str):
             
             logger.info(f"Page loaded with status: {response.status}")
             
-            logger.info("Waiting 10 seconds for page to load completely...")
-            sleep(3)
+            logger.info("Waiting 7 seconds for page to load completely...")
+            sleep(7)
             
             logger.info("Taking pre-consent screenshot...")
             page.screenshot(
@@ -76,7 +76,7 @@ def run_accept(domain: str):
                 sleep(2)
             else:
                 logger.warning(f"No consent dialog found or unable to accept on {domain}")
-                sleep(1)
+                sleep(1.5)
             
             logger.info("Taking post-consent screenshot...")
             page.screenshot(
