@@ -1,4 +1,7 @@
 domain,country
+france24.com,fr
+bbc.co.uk,uk
+nbcnews.com,us
 nos.nl,nl
 nu.nl,nl
 ad.nl,nl
@@ -9,7 +12,6 @@ n-tv.de,de
 dw.com,de
 lefigaro.fr,fr
 lemonde.fr,fr
-france24.com,fr
 libero.it,it
 repubblica.it,it
 corriere.it,it
@@ -17,12 +19,10 @@ gazzetta.it,it
 theguardian.com,uk
 dailymail.co.uk,uk
 the-sun.com,uk
-bbc.co.uk,uk
 skynews.com,uk
 msn.com,us
 nytimes.com,us
 cnn.com,us
-nbcnews.com,us
 foxnews.com,us
 nypost.com,us
 apnews.com,us
