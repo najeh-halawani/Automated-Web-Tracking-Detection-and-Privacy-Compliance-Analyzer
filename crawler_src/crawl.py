@@ -1,7 +1,7 @@
 '''
 Author: Najeh Halawani
 -----
-Last Modified: Sunday, 2nd November 2025 6:26:54 pm
+Last Modified: Monday, 10th November 2025 12:13:12 pm
 Modified By: Najeh Halawani
 -----
 '''
@@ -13,8 +13,8 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
-from runs import run_accept, run_reject, run_block
-from utils import setup_logging
+from crawler_src.runs import run_accept, run_reject, run_block
+from crawler_src.utils import setup_logging
 
 
 def parse_arguments():
