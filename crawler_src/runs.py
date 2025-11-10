@@ -1,7 +1,7 @@
 '''
 Author: Najeh Halawani
 -----
-Last Modified: Sunday, 2nd November 2025 7:38:48 pm
+Last Modified: Monday, 10th November 2025 12:13:12 pm
 Modified By: Najeh Halawani
 -----
 '''
@@ -9,10 +9,10 @@ Modified By: Najeh Halawani
 import logging
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from time import sleep
-from utils import get_keywords, scroll_to_bottom
+from crawler_src.utils import get_keywords, scroll_to_bottom
 from pathlib import Path
 
-from cookie_consent_handler import CookieConsentHandler, accept_cookies
+from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
 
 logger = logging.getLogger(__name__)
 
