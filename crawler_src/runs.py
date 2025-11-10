@@ -13,12 +13,12 @@ from time import sleep
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from cookie_consent_handler import CookieConsentHandler, accept_cookies
-from utils import get_keywords, scroll_to_bottom
+from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
+from crawler_src.utils import get_keywords, scroll_to_bottom
 
 logger = logging.getLogger(__name__)
 
-
+# Run command: python -m crawler_src.crawl -m accept -l data/site_list.csv
 def run_accept(domain: str):
     logger.info(f"Starting accept crawl for: {domain}")
     output_dir = Path("./crawl_data_accept")
