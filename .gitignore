@@ -12,11 +12,11 @@ venv/
 .vscode/
 
 # Project-generated data
-analysis/
 crawl_data_accept/
 crawl_data_block/
 crawl_data_reject/
 logs/
+analysis/results.jsonl
 # Reports and documents
 *.pdf
 # Miscellaneous

@@ -46,7 +46,7 @@ class CookieConsentHandler:
         if normalized_text in self.accept_keywords_set and len(normalized_text) < 10:
             return 3
         elif normalized_text in self.accept_keywords_set:
-            return 2.5
+            return 2.5 # type: ignore
          
         if self.partial_match_pattern.search(normalized_text):
             # Score 2: Keyword found in a short text (likely a button label)
