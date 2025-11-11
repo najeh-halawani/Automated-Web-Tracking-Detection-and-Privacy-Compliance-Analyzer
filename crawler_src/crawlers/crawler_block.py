@@ -14,8 +14,8 @@ from time import sleep
 import tldextract
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from cookie_consent_handler import CookieConsentHandler, accept_cookies
-from utils import get_keywords, scroll_to_bottom
+from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
+from crawler_src.utils import get_keywords, scroll_to_bottom
 
 from urllib.parse import urlparse
 
