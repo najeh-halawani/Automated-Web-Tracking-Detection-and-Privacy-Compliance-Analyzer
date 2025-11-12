@@ -13,8 +13,8 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
-from crawler_src.runs import run_accept, run_reject, run_block
-from crawler_src.utils import setup_logging
+from runs import run_accept, run_reject, run_block
+from utils import setup_logging
 
 
 def parse_arguments():

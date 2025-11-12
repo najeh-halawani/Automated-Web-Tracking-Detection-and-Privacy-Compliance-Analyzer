@@ -13,8 +13,8 @@ from time import sleep
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
-from crawler_src.utils import get_keywords, scroll_to_bottom
+from cookie_consent_handler import  accept_cookies
+from utils import get_keywords, scroll_to_bottom
 
 logger = logging.getLogger(__name__)
 
@@ -126,13 +126,15 @@ def run_accept(domain: str):
                 (output_dir / f"{domain}_cookie_writes.json").write_text(
                     json.dumps({"domain": domain, "writes": cookie_log}, ensure_ascii=False, indent=2),
                     encoding="utf-8",
-                )
+                )  
+                logger.info(f"Saved cookie log for {domain} with {len(cookie_log)} entries")
             except Exception as e:
                 logger.error(f"Error saving cookie log: {e}")
 
             try:
-                context.close()
                 browser.close()
+                context.close()
+                page.close()
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
 
