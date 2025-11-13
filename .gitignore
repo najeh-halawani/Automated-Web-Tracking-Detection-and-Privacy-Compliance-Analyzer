@@ -21,3 +21,5 @@ analysis/results.jsonl
 *.pdf
 # Miscellaneous
 *.log
+# Testing code
+test_example.py

@@ -4,6 +4,10 @@ Author: Najeh Halawani
 Last Modified: Monday, 10th November 2025 12:18:34 pm
 Modified By: Najeh Halawani
 -----
+Last Modified: Wednesday, 12th November 2025 11:18:34 pm
+    Added support for reject words and modularized the get_keywords() logic
+Modified By: Rahul Deiv
+-----
 '''
 import warnings
 import logging
@@ -22,6 +26,7 @@ with open(WORD_FILE, "r", encoding="utf-8") as f:
     word_data = json.load(f)
 
 accept_words = word_data["accept_words"]
+reject_words = word_data["reject_words"]
 words = word_data["words"]
 
 
@@ -56,15 +61,19 @@ def setup_logging():
     
 def get_keywords(keyword: str) -> list:   
     if keyword == "accept":
-        unique_keywords = set(accept_words)  
-        for lang_dict in words.values():
-            for word in accept_words:
-                if word in lang_dict:
-                    unique_keywords.add(lang_dict[word])
-
-        return list(unique_keywords) 
-
-    return []
+        base_words = accept_words
+    elif keyword == "reject":
+        base_words = reject_words
+    else:
+        return []
+    
+    unique_keywords = set(base_words)
+    for lang_dict in words.values():
+        for word in base_words:
+            if word in lang_dict:
+                unique_keywords.add(lang_dict[word])
+    
+    return list(unique_keywords)
 
 
 def scroll_down(page: Page):

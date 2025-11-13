@@ -13,7 +13,7 @@ from time import sleep
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
+from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies, reject_cookies
 from crawler_src.utils import get_keywords, scroll_to_bottom
 
 logger = logging.getLogger(__name__)
