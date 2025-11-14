@@ -1,10 +1,3 @@
-"""
-Author: Najeh Halawani
------
-Last Modified: Monday, 10th November 2025 12:13:12 pm
-Modified By: Najeh Halawani
------
-"""
 
 import argparse
 import logging

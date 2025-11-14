@@ -1,10 +1,4 @@
-'''
-Author: Najeh Halawani
------
-Last Modified: Sunday, 2nd November 2025 7:35:16 pm
-Modified By: Najeh Halawani
------
-'''
+
 import re
 import logging
 from typing import Optional, List, Tuple

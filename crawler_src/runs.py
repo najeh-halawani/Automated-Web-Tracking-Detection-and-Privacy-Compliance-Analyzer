@@ -1,10 +1,4 @@
-"""
-Author: Najeh Halawani
------
-Last Modified: Monday, 10th November 2025 12:00:00 pm
-Modified By: Mikel Telleria
------
-"""
+
 
 import json
 import logging
@@ -15,7 +9,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from cookie_consent_handler import  accept_cookies
 from utils import get_keywords, scroll_to_bottom
-from crawler_src.crawlers.crawler_block import (
+from crawlers.crawler_block import (
     load_disconnect_blocklist,
     build_blocked_etld1_set,
     _create_block_context,
@@ -252,7 +246,8 @@ def run_block(
                 logger.error(f"Error saving cookie log: {e}")
 
             try:
-                context.close()
                 browser.close()
+                context.close()
+                page.close()
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
