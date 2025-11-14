@@ -13,9 +13,8 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
-from crawler_src.runs import run_accept, run_reject
+from crawler_src.runs import run_accept, run_reject, run_block
 from crawler_src.utils import setup_logging
-from crawler_src.crawlers.crawler_block import run_block
 
 
 def parse_arguments():
