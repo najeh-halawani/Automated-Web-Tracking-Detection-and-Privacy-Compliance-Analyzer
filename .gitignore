@@ -21,3 +21,6 @@ analysis/results.jsonl
 *.pdf
 # Miscellaneous
 *.log
+
+__pycache__
+__init__.pyc

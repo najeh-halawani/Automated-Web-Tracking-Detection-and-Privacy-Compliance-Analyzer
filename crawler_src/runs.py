@@ -13,9 +13,9 @@ from time import sleep
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
-from crawler_src.utils import get_keywords, scroll_to_bottom
-from crawler_src.crawlers.crawler_block import (
+from cookie_consent_handler import CookieConsentHandler, accept_cookies
+from utils import get_keywords, scroll_to_bottom
+from crawlers.crawler_block import (
     load_disconnect_blocklist,
     build_blocked_etld1_set,
     _create_block_context,
