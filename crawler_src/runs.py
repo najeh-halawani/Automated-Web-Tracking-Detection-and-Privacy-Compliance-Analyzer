@@ -1,10 +1,10 @@
-'''
+"""
 Author: Najeh Halawani
 -----
 Last Modified: Monday, 10th November 2025 12:00:00 pm
 Modified By: Mikel Telleria
 -----
-'''
+"""
 
 import json
 import logging
@@ -13,12 +13,18 @@ from time import sleep
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from cookie_consent_handler import CookieConsentHandler, accept_cookies
-from utils import get_keywords, scroll_to_bottom
+from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
+from crawler_src.utils import get_keywords, scroll_to_bottom
+from crawler_src.crawlers.crawler_block import (
+    load_disconnect_blocklist,
+    build_blocked_etld1_set,
+    _create_block_context,
+)
 
 logger = logging.getLogger(__name__)
 
 
+# Run command: python -m crawler_src.crawl -m accept -l data/site_list.csv
 def run_accept(domain: str):
     logger.info(f"Starting accept crawl for: {domain}")
     output_dir = Path("./crawl_data_accept")
@@ -99,7 +105,9 @@ def run_accept(domain: str):
                 logger.info(f"Successfully accepted cookies on {domain}")
                 sleep(2)
             else:
-                logger.warning(f"No consent dialog found or unable to accept on {domain}")
+                logger.warning(
+                    f"No consent dialog found or unable to accept on {domain}"
+                )
                 sleep(1.5)
 
             logger.info("Taking post-consent screenshot...")
@@ -124,7 +132,11 @@ def run_accept(domain: str):
                 # Persist any client-side cookie writes captured during the session.
                 cookie_log = page.evaluate("window.__cookieWrites || []")
                 (output_dir / f"{domain}_cookie_writes.json").write_text(
-                    json.dumps({"domain": domain, "writes": cookie_log}, ensure_ascii=False, indent=2),
+                    json.dumps(
+                        {"domain": domain, "writes": cookie_log},
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
                     encoding="utf-8",
                 )
             except Exception as e:
@@ -143,7 +155,101 @@ def run_reject(domain: str):
     pass
 
 
-def run_block(domain: str):
+# Run command: python -m crawler_src.crawl -m block -l crawler_src/site_list.csv
+def run_block(
+    domain: str, services_path: str | Path = "./crawler_src/disconnect_blocklist.json"
+):
+    """Run the Block crawler for a single domain.
+    - Loads Disconnect services.json
+    - Blocks requests to Advertising/Analytics/Social/Fingerprinting domains
+    - Accepts consent (per assignment for block mode)
+    - Captures HAR, video, pre/post screenshots, and client-side cookie writes
+    """
     logger.info(f"Starting block crawl for: {domain}")
-    # TODO: Implement block logic
-    pass
+    output_dir = Path("./crawl_data_block")
+    output_dir.mkdir(exist_ok=True)
+
+    # Load blocklist
+    services = load_disconnect_blocklist(services_path)
+    blocked = build_blocked_etld1_set(services)
+    logger.info(f"Blocklist domains (eTLD+1): {len(blocked)}")
+
+    accept_keywords = get_keywords("accept")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        context, page = _create_block_context(browser, output_dir, domain, blocked)
+
+        try:
+            logger.info(f"Navigating to: https://{domain}")
+            response = page.goto(
+                f"https://{domain}", wait_until="domcontentloaded", timeout=30000
+            )
+            if response is None:
+                logger.error(f"Failed to load page: {domain}")
+                return
+            logger.info(f"Page loaded with status: {response.status}")
+
+            logger.info("Waiting 7 seconds for page to settle...")
+            sleep(7)
+
+            logger.info("Taking pre-consent screenshot...")
+            page.screenshot(
+                path=str(output_dir / f"{domain}_pre_consent.png"),
+                full_page=True,
+                timeout=10000,
+            )
+
+            # In block mode: Accept all (assignment requirement)
+            logger.info(
+                "Attempting to accept cookies (block mode requires accept-all)..."
+            )
+            try:
+                consent_accepted = accept_cookies(page, accept_keywords)
+                if consent_accepted:
+                    logger.info("Consent accepted.")
+                else:
+                    logger.warning("No consent dialog found or unable to accept.")
+            except Exception as e:
+                logger.warning(f"Consent handler error: {e}")
+
+            logger.info("Taking post-consent screenshot...")
+            page.screenshot(
+                path=str(output_dir / f"{domain}_post_consent.png"),
+                full_page=True,
+                timeout=10000,
+            )
+
+            logger.info("Scrolling to bottom of page...")
+            scroll_to_bottom(page)
+            sleep(2)
+
+            logger.info(f"Block crawl finished for: {domain}")
+
+        except PlaywrightTimeoutError as e:
+            logger.error(f"Timeout on {domain}: {e}")
+        except Exception as e:
+            logger.error(f"Error crawling {domain}: {e}", exc_info=True)
+        finally:
+            # Persist any client-side cookie writes captured during the session.
+            try:
+                cookie_log = page.evaluate("window.__cookieWrites || []")
+                (output_dir / f"{domain}_cookie_writes.json").write_text(
+                    json.dumps(
+                        {"domain": domain, "writes": cookie_log},
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
+            except Exception as e:
+                logger.error(f"Error saving cookie log: {e}")
+
+            try:
+                context.close()
+                browser.close()
+            except Exception as e:
+                logger.error(f"Error closing browser: {e}")

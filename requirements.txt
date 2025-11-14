@@ -1,0 +1,15 @@
+# Core browser automation
+playwright==1.49.0
+
+# For handling domain parsing (eTLD+1 extraction)
+tldextract==5.1.2
+
+# Data handling
+pandas==2.2.3
+
+# JSON schema and typing utilities (optional but helpful)
+pydantic==2.8.2
+
+# For CLI and colored logging (optional but nice for dev UX)
+click==8.1.7
+rich==13.9.2
