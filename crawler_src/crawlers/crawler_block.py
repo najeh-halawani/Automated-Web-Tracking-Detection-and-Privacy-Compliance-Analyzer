@@ -1,11 +1,3 @@
-"""
-Block crawler implementation
-Author: Enrique Favila
-Description: Implements the 'block' mode of the Online Tracking crawler.
-Blocks requests to advertising, analytics, social, and fingerprinting domains
-based on the Disconnect services.json list.
-"""
-
 import json
 import logging
 from pathlib import Path
@@ -14,8 +6,8 @@ from time import sleep
 import tldextract
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from crawler_src.cookie_consent_handler import CookieConsentHandler, accept_cookies
-from crawler_src.utils import get_keywords, scroll_to_bottom
+from cookie_consent_handler import CookieConsentHandler, accept_cookies
+from utils import get_keywords, scroll_to_bottom
 
 from urllib.parse import urlparse
 
