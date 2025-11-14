@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 '''
 Author: Mikel Telleria
 -----
@@ -23,7 +21,7 @@ HAR_ROOTS: Tuple[pathlib.Path, ...] = (
     pathlib.Path("crawl_data_reject"),
     pathlib.Path("crawl_data_block"),
 )
-SITE_LIST_PATH = pathlib.Path("site_list.csv")
+SITE_LIST_PATH = pathlib.Path("crawler_src") / "site_list.csv"
 BLOCKLIST_PATH = pathlib.Path("disconnect_blocklist.json")
 OUTPUT_PATH = pathlib.Path("analysis") / "results.jsonl"
 
