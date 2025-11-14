@@ -52,19 +52,60 @@ def load_disconnect_blocklist(path: str | Path) -> dict:
 
 
 def build_blocked_etld1_set(services: dict) -> set[str]:
-    """Return a set of eTLD+1s to block based on required Disconnect categories."""
+    """
+    Support both:
+      A) New schema: {"license": "...", "categories": { "Advertising": {...}, ... }}
+         where each category maps to either:
+           - dict of entities -> list[str domain], or
+           - list[str domain]
+      B) Old schema: { "Google": {"categories":[...], "properties":[...]} , ... }
+    """
     blocked: set[str] = set()
     if not isinstance(services, dict):
         return blocked
 
+    # ---- A) New schema: categories-first
+    cats_obj = services.get("categories")
+    if isinstance(cats_obj, dict):
+        for cat_name, payload in cats_obj.items():
+            if cat_name not in _REQUIRED_CATEGORIES:
+                continue
+
+            # payload can be a dict of entities -> [domains], or a flat list of domains
+            if isinstance(payload, dict):
+                iter_domain_lists = payload.values()
+            elif isinstance(payload, list):
+                iter_domain_lists = [payload]
+            else:
+                continue
+
+            for domain_list in iter_domain_lists:
+                if not isinstance(domain_list, (list, tuple)):
+                    continue
+                for host in domain_list:
+                    if not host:
+                        continue
+                    host = str(host).lstrip("*.").strip()
+                    et = _etld1(host)
+                    if et:
+                        blocked.add(et)
+        return blocked
+
+    # ---- B) Old schema: entities-first
     for _entity, entry in services.items():
-        cats = set(map(str, (entry or {}).get("categories", [])))
+        if not isinstance(entry, dict):
+            continue
+        cats = set(map(str, entry.get("categories", [])))
         if not (cats & _REQUIRED_CATEGORIES):
             continue
-        for host in (entry or {}).get("properties", []):
-            et = _etld1(str(host))
+        for host in entry.get("properties", []):
+            if not host:
+                continue
+            host = str(host).lstrip("*.").strip()
+            et = _etld1(host)
             if et:
                 blocked.add(et)
+
     return blocked
 
 
@@ -130,7 +171,10 @@ def _create_block_context(
 # --- Public entrypoint ------------------------------------------------------------
 
 
-def run_block(domain: str, services_path: str | Path = "./lists/services.json"):
+def run_block(
+    domain: str, services_path: str | Path = "./crawler_src/disconnect_blocklist.json"
+):
+    # Path can be changed to ./crawler_src/disconnect_blocklist.json
     """Run the Block crawler for a single domain.
     - Loads Disconnect services.json
     - Blocks requests to Advertising/Analytics/Social/Fingerprinting domains
