@@ -27,6 +27,9 @@ with open(WORD_FILE, "r", encoding="utf-8") as f:
 
 accept_words = word_data["accept_words"]
 reject_words = word_data["reject_words"]
+setting_words = word_data["setting_words"]
+save_setting_words = word_data["save_setting_words"]
+essentials_only_words = word_data["essentials_only_words"]
 words = word_data["words"]
 
 
@@ -72,7 +75,37 @@ def get_keywords(keyword: str) -> list:
         for word in base_words:
             if word in lang_dict:
                 unique_keywords.add(lang_dict[word])
-    
+
+    return list(unique_keywords) 
+
+
+def get_setting_keywords() -> list:
+    """Get all setting/preferences keywords (base + translations)."""
+    unique_keywords = set(setting_words)
+    for lang_dict in words.values():
+        for word in setting_words:
+            if word in lang_dict:
+                unique_keywords.add(lang_dict[word])
+    return list(unique_keywords)
+
+
+def get_save_setting_keywords() -> list:
+    """Get all save/confirm keywords for settings dialog (base + translations)."""
+    unique_keywords = set(save_setting_words)
+    for lang_dict in words.values():
+        for word in save_setting_words:
+            if word in lang_dict:
+                unique_keywords.add(lang_dict[word])
+    return list(unique_keywords)
+
+
+def get_essentials_only_keywords() -> list:
+    """Get all essentials only/necessary cookies only keywords (base + translations)."""
+    unique_keywords = set(essentials_only_words)
+    for lang_dict in words.values():
+        for word in essentials_only_words:
+            if word in lang_dict:
+                unique_keywords.add(lang_dict[word])
     return list(unique_keywords)
 
 
