@@ -22,7 +22,14 @@ HAR_ROOTS: Tuple[pathlib.Path, ...] = (
     pathlib.Path("crawl_data_block"),
 )
 SITE_LIST_PATH = pathlib.Path("crawler_src") / "site_list.csv"
-BLOCKLIST_PATH = pathlib.Path("disconnect_blocklist.json")
+BLOCKLIST_PATHS: Tuple[pathlib.Path, ...] = (
+    pathlib.Path("crawler_src") / "disconnect_blocklist.json",
+    pathlib.Path("disconnect_blocklist.json"),
+)
+ENTITIES_PATHS: Tuple[pathlib.Path, ...] = (
+    pathlib.Path("analysis") / "entities.json",
+    pathlib.Path("crawler_src") / "entities.json",
+)
 OUTPUT_PATH = pathlib.Path("analysis") / "results.jsonl"
 
 
@@ -48,30 +55,72 @@ def load_site_catalog(path: pathlib.Path) -> Dict[str, Dict[str, str]]:
     return catalog
 
 
-def load_disconnect_lookup(path: pathlib.Path) -> Dict[str, str]:
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    categories = data.get("categories", {})
+def load_disconnect_lookup(paths: Iterable[pathlib.Path]) -> Dict[str, str]:
+    for path in paths:
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        categories = data.get("categories", {})
+        lookup: Dict[str, str] = {}
+
+        def _register(value: str, category: str) -> None:
+            domain = normalize_domain(value)
+            if domain and "." in domain:
+                lookup[domain] = category
+
+        def _walk(payload, category: str) -> None:
+            if isinstance(payload, str):
+                _register(payload, category)
+            elif isinstance(payload, dict):
+                for key, nested in payload.items():
+                    if isinstance(key, str):
+                        _register(key, category)
+                    _walk(nested, category)
+            elif isinstance(payload, list):
+                for item in payload:
+                    _walk(item, category)
+
+        for category, entities in categories.items():
+            if isinstance(entities, dict):
+                for entity_data in entities.values():
+                    _walk(entity_data, category)
+            elif isinstance(entities, list):
+                for entity_data in entities:
+                    _walk(entity_data, category)
+        if lookup:
+            return lookup
+    return {}
+
+
+def load_disconnect_entities(paths: Iterable[pathlib.Path]) -> Dict[str, str]:
     lookup: Dict[str, str] = {}
 
-    def _register(domain: str, category: str) -> None:
-        if domain:
-            lookup[domain.lower()] = category
+    def _register(domain: str, entity: str) -> None:
+        if domain and entity and domain not in lookup:
+            lookup[domain.lower()] = entity
 
-    for category, entities in categories.items():
+    for candidate in paths:
+        if not candidate.exists():
+            continue
+        try:
+            payload = json.loads(candidate.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        entities = payload.get("entities")
         if not isinstance(entities, dict):
             continue
-        for entity, entity_data in entities.items():
-            _register(entity, category)
-            if isinstance(entity_data, dict):
-                for coll_name in ("domains", "properties", "resources"):
-                    for item in entity_data.get(coll_name, []):
-                        if isinstance(item, str):
-                            _register(item, category)
+        for entity_name, entity_data in entities.items():
+            if not isinstance(entity_data, dict):
+                continue
+            for key in ("domains", "properties", "resources"):
+                for item in entity_data.get(key, []) or []:
+                    if isinstance(item, str):
+                        _register(item, entity_name)
+        if lookup:
+            break
     return lookup
 
 
@@ -189,6 +238,18 @@ def lookup_disconnect_category(host: Optional[str], lookup: Dict[str, str]) -> O
     return None
 
 
+def lookup_disconnect_entity(host: Optional[str], lookup: Dict[str, str]) -> Optional[str]:
+    if not host:
+        return None
+    host = host.lower()
+    parts = host.split(".")
+    for idx in range(len(parts)):
+        candidate = ".".join(parts[idx:])
+        if candidate in lookup:
+            return lookup[candidate]
+    return None
+
+
 def is_third_party(host: Optional[str], first_party: Optional[str]) -> bool:
     if not host or not first_party:
         return False
@@ -217,7 +278,10 @@ def extract_visit_bounds(entries: List[dict]) -> Tuple[Optional[str], Optional[s
 
 
 def extract_requests(
-    har_blob: dict, first_party_domain: Optional[str], disconnect_lookup: Dict[str, str]
+    har_blob: dict,
+    first_party_domain: Optional[str],
+    disconnect_lookup: Dict[str, str],
+    disconnect_entity_lookup: Dict[str, str],
 ) -> Tuple[List[dict], Dict[str, object]]:
     entries = har_blob.get("log", {}).get("entries", []) or []
     requests: List[dict] = []
@@ -229,6 +293,7 @@ def extract_requests(
     domains_total: set[str] = set()
     domains_third: set[str] = set()
     disconnect_counter: Counter[str] = Counter()
+    disconnect_entity_counter: Counter[str] = Counter()
 
     for entry in entries:
         request = entry.get("request", {})
@@ -241,6 +306,7 @@ def extract_requests(
         domain = host.lower()
         domains_total.add(domain)
         category = lookup_disconnect_category(host, disconnect_lookup)
+        entity = lookup_disconnect_entity(host, disconnect_entity_lookup)
         if category:
             disconnect_counter[category] += 1
         is_third = is_third_party(host, first_party_domain)
@@ -248,6 +314,8 @@ def extract_requests(
             third_party_count += 1
             if domain:
                 domains_third.add(domain)
+            if entity:
+                disconnect_entity_counter[entity] += 1
         status = response.get("status")
         if isinstance(status, int) and status >= 400:
             error_count += 1
@@ -273,6 +341,7 @@ def extract_requests(
             "protocol": request.get("httpVersion"),
             "is_third_party": is_third,
             "disconnect_category": category,
+            "disconnect_entity": entity,
             "request_headers": headers_to_dict(request.get("headers", [])),
             "response_headers": headers_to_dict(response.get("headers", [])),
             "request_cookies": simplify_cookies(request.get("cookies", [])),
@@ -294,6 +363,9 @@ def extract_requests(
         "unique_domains_third_party": len(domains_third),
         "disconnect_categories": sorted(disconnect_counter.keys()),
         "disconnect_category_counts": dict(disconnect_counter),
+        "disconnect_entities": sorted(disconnect_entity_counter.keys()),
+        "disconnect_entity_counts": dict(disconnect_entity_counter),
+        "disconnect_entity_unique_count": len(disconnect_entity_counter),
         "total_latency_ms": total_latency_ms,
         "blocked_requests": blocked_count,
         "error_responses": error_count,
@@ -314,6 +386,7 @@ def build_record(
     har_path: pathlib.Path,
     catalog: Dict[str, Dict[str, str]],
     disconnect_lookup: Dict[str, str],
+    disconnect_entity_lookup: Dict[str, str],
 ) -> dict:
     metadata = load_metadata(har_path, catalog)
     record = {
@@ -347,7 +420,7 @@ def build_record(
     if not isinstance(first_party_domain, str):
         first_party_domain = None
     requests, summary = extract_requests(
-        har_blob, first_party_domain, disconnect_lookup
+        har_blob, first_party_domain, disconnect_lookup, disconnect_entity_lookup
     )
     record["requests"] = requests
     record["summary"] = summary
@@ -357,11 +430,17 @@ def build_record(
 def main() -> None:
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     site_catalog = load_site_catalog(SITE_LIST_PATH)
-    disconnect_lookup = load_disconnect_lookup(BLOCKLIST_PATH)
+    disconnect_lookup = load_disconnect_lookup(BLOCKLIST_PATHS)
+    disconnect_entities = load_disconnect_entities(ENTITIES_PATHS)
 
     with OUTPUT_PATH.open("w", encoding="utf-8") as sink:
         for har_path in iter_har_files(HAR_ROOTS):
-            record = build_record(har_path, site_catalog, disconnect_lookup)
+            record = build_record(
+                har_path,
+                site_catalog,
+                disconnect_lookup,
+                disconnect_entities,
+            )
             sink.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
