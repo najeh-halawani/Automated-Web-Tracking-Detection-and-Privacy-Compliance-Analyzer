@@ -21,6 +21,9 @@ analysis/results.jsonl
 *.pdf
 # Miscellaneous
 *.log
+# Testing code
+test_example.py
+test_reject.py
 
 __pycache__
 __init__.pyc
