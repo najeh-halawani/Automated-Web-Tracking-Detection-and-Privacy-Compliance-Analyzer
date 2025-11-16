@@ -25,3 +25,6 @@ analysis/results.jsonl
 __pycache__
 __init__.pyc
 .DS_Store
+
+test_example.py
+test_reject.py

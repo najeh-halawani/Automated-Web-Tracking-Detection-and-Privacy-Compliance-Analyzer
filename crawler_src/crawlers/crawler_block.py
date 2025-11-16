@@ -201,8 +201,8 @@ def run_block(
                 return
             logger.info(f"Page loaded with status: {response.status}")
 
-            logger.info("Waiting 7 seconds for page to settle...")
-            sleep(7)
+            logger.info("Waiting 10 seconds for page to settle...")
+            sleep(10)
 
             logger.info("Taking pre-consent screenshot...")
             page.screenshot(
