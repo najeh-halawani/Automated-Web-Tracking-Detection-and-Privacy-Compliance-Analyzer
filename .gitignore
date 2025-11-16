@@ -28,3 +28,10 @@ __init__.pyc
 
 test_example.py
 test_reject.py
+# Testing code
+test_example.py
+test_reject.py
+
+__pycache__
+__init__.pyc
+.DS_Store
