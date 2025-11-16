@@ -151,8 +151,9 @@ def run_accept(domain: str):
                 logger.error(f"Error saving cookie log: {e}")
 
             try:
-                context.close()
                 browser.close()
+                context.close()
+                page.close()
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
 
@@ -369,8 +370,9 @@ def run_reject(domain: str):
                 logger.error(f"Error saving cookie log: {err}")
 
             try:
-                context.close()
                 browser.close()
+                context.close()
+                page.close()
             except Exception as err:
                 logger.error(f"Error closing browser: {err}")
 
@@ -413,8 +415,8 @@ def run_block(
                 return
             logger.info(f"Page loaded with status: {response.status}")
 
-            logger.info("Waiting 7 seconds for page to settle...")
-            sleep(7)
+            logger.info("Waiting 10 seconds for page to settle...")
+            sleep(10)
 
             logger.info("Taking pre-consent screenshot...")
             page.screenshot(
@@ -469,7 +471,8 @@ def run_block(
                 logger.error(f"Error saving cookie log: {e}")
 
             try:
-                context.close()
                 browser.close()
+                context.close()
+                page.close()
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
