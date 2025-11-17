@@ -122,6 +122,8 @@ def _make_block_route(blocked_etld1: set[str]):
 def _create_block_context(
     browser, output_dir: Path, domain: str, blocked_etld1: set[str]
 ):
+    print("output_dir:", output_dir)
+    print("output dir resolve", str(output_dir.resolve()))
     """Create a Playwright context that records HAR/video and blocks tracking domains."""
     context = browser.new_context(
         user_agent=(
@@ -257,6 +259,7 @@ def run_block(
                 logger.error(f"Error saving cookie log: {e}")
 
             try:
+                page.close()
                 context.close()
                 browser.close()
             except Exception as e:

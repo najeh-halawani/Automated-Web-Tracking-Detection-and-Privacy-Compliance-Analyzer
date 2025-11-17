@@ -151,9 +151,9 @@ def run_accept(domain: str):
                 logger.error(f"Error saving cookie log: {e}")
 
             try:
-                browser.close()
-                context.close()
                 page.close()
+                context.close()
+                browser.close()
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
 
@@ -370,9 +370,9 @@ def run_reject(domain: str):
                 logger.error(f"Error saving cookie log: {err}")
 
             try:
-                browser.close()
-                context.close()
                 page.close()
+                context.close()
+                browser.close()
             except Exception as err:
                 logger.error(f"Error closing browser: {err}")
 
@@ -471,8 +471,8 @@ def run_block(
                 logger.error(f"Error saving cookie log: {e}")
 
             try:
-                browser.close()
-                context.close()
                 page.close()
+                context.close()
+                browser.close()
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
