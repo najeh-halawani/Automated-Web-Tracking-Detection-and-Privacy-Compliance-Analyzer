@@ -394,6 +394,7 @@ def run_block(
     # Load blocklist
     services = load_disconnect_blocklist(services_path)
     blocked = build_blocked_etld1_set(services)
+    
     logger.info(f"Blocklist domains (eTLD+1): {len(blocked)}")
 
     accept_keywords = get_keywords("accept")

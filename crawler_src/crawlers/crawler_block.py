@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 from time import sleep
+import ast
 
 import tldextract
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
@@ -105,12 +106,25 @@ def build_blocked_etld1_set(services: dict) -> set[str]:
 
 
 def _make_block_route(blocked_etld1: set[str]):
+    logger.info(f"Creating block route for {len(blocked_etld1)} blocked eTLD+1 domains")
     def handler(route, request):
         try:
             host = urlparse(request.url).hostname or ""
             et = _etld1(host)
-            if et and et in blocked_etld1:
-                return route.abort()
+            # logger.info(f"et: {et}")
+            
+            for item in blocked_etld1:
+                # logger.info(f"Checking blocked item: {item}")
+                
+                blocked_dict = ast.literal_eval(item)
+                
+                for outer_key, inner_dict in blocked_dict.items():
+                    # logger.info(f"{outer_key} -> {inner_dict}")
+                    for url, domain_list in inner_dict.items():
+                        # logger.info(f"domain_list: {domain_list}")
+                        if et in domain_list:
+                            logger.info(f"ABORT: {et} found in {outer_key} -> {url}")
+                            return route.abort()
         except Exception:
             # Fail-open to avoid breaking navigation on parsing issues
             pass
@@ -122,8 +136,8 @@ def _make_block_route(blocked_etld1: set[str]):
 def _create_block_context(
     browser, output_dir: Path, domain: str, blocked_etld1: set[str]
 ):
-    print("output_dir:", output_dir)
-    print("output dir resolve", str(output_dir.resolve()))
+    # print("output_dir:", output_dir)
+    # print("output dir resolve", str(output_dir.resolve()))
     """Create a Playwright context that records HAR/video and blocks tracking domains."""
     context = browser.new_context(
         user_agent=(
@@ -165,102 +179,102 @@ def _create_block_context(
 # --- Public entrypoint ------------------------------------------------------------
 
 
-def run_block(
-    domain: str, services_path: str | Path = "./crawler_src/disconnect_blocklist.json"
-):
-    # Path can be changed to ./crawler_src/disconnect_blocklist.json
-    """Run the Block crawler for a single domain.
-    - Loads Disconnect services.json
-    - Blocks requests to Advertising/Analytics/Social/Fingerprinting domains
-    - Accepts consent (per assignment for block mode)
-    - Captures HAR, video, pre/post screenshots, and client-side cookie writes
-    """
-    logger.info(f"Starting block crawl for: {domain}")
-    output_dir = Path("./crawl_data_block")
-    output_dir.mkdir(exist_ok=True)
+# def run_block(
+#     domain: str, services_path: str | Path = "./crawler_src/disconnect_blocklist.json"
+# ):
+#     # Path can be changed to ./crawler_src/disconnect_blocklist.json
+#     """Run the Block crawler for a single domain.
+#     - Loads Disconnect services.json
+#     - Blocks requests to Advertising/Analytics/Social/Fingerprinting domains
+#     - Accepts consent (per assignment for block mode)
+#     - Captures HAR, video, pre/post screenshots, and client-side cookie writes
+#     """
+#     logger.info(f"Starting block crawl for: {domain}")
+#     output_dir = Path("./crawl_data_block")
+#     output_dir.mkdir(exist_ok=True)
 
-    # Load blocklist
-    services = load_disconnect_blocklist(services_path)
-    blocked = build_blocked_etld1_set(services)
-    logger.info(f"Blocklist domains (eTLD+1): {len(blocked)}")
+#     # Load blocklist
+#     services = load_disconnect_blocklist(services_path)
+#     blocked = build_blocked_etld1_set(services)
 
-    accept_keywords = get_keywords("accept")
+#     logger.info(f"Blocklist domains (eTLD+1): {len(blocked)}")
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=False,
-            args=["--disable-blink-features=AutomationControlled"],
-        )
-        context, page = _create_block_context(browser, output_dir, domain, blocked)
+#     accept_keywords = get_keywords("accept")
+#     with sync_playwright() as p:
+#         browser = p.chromium.launch(
+#             headless=False,
+#             args=["--disable-blink-features=AutomationControlled"],
+#         )
+#         context, page = _create_block_context(browser, output_dir, domain, blocked)
 
-        try:
-            logger.info(f"Navigating to: https://{domain}")
-            response = page.goto(
-                f"https://{domain}", wait_until="domcontentloaded", timeout=30000
-            )
-            if response is None:
-                logger.error(f"Failed to load page: {domain}")
-                return
-            logger.info(f"Page loaded with status: {response.status}")
+#         try:
+#             logger.info(f"Navigating to: https://{domain}")
+#             response = page.goto(
+#                 f"https://{domain}", wait_until="domcontentloaded", timeout=30000
+#             )
+#             if response is None:
+#                 logger.error(f"Failed to load page: {domain}")
+#                 return
+#             logger.info(f"Page loaded with status: {response.status}")
 
-            logger.info("Waiting 10 seconds for page to settle...")
-            sleep(10)
+#             logger.info("Waiting 10 seconds for page to settle...")
+#             sleep(10)
 
-            logger.info("Taking pre-consent screenshot...")
-            page.screenshot(
-                path=str(output_dir / f"{domain}_pre_consent.png"),
-                full_page=True,
-                timeout=10000,
-            )
+#             logger.info("Taking pre-consent screenshot...")
+#             page.screenshot(
+#                 path=str(output_dir / f"{domain}_pre_consent.png"),
+#                 full_page=True,
+#                 timeout=10000,
+#             )
 
-            # In block mode: Accept all (assignment requirement)
-            logger.info(
-                "Attempting to accept cookies (block mode requires accept-all)..."
-            )
-            try:
-                consent_accepted = accept_cookies(page, accept_keywords)
-                if consent_accepted:
-                    logger.info("Consent accepted.")
-                else:
-                    logger.warning("No consent dialog found or unable to accept.")
-            except Exception as e:
-                logger.warning(f"Consent handler error: {e}")
+#             # In block mode: Accept all (assignment requirement)
+#             logger.info(
+#                 "Attempting to accept cookies (block mode requires accept-all)..."
+#             )
+#             try:
+#                 consent_accepted = accept_cookies(page, accept_keywords)
+#                 if consent_accepted:
+#                     logger.info("Consent accepted.")
+#                 else:
+#                     logger.warning("No consent dialog found or unable to accept.")
+#             except Exception as e:
+#                 logger.warning(f"Consent handler error: {e}")
 
-            logger.info("Taking post-consent screenshot...")
-            page.screenshot(
-                path=str(output_dir / f"{domain}_post_consent.png"),
-                full_page=True,
-                timeout=10000,
-            )
+#             logger.info("Taking post-consent screenshot...")
+#             page.screenshot(
+#                 path=str(output_dir / f"{domain}_post_consent.png"),
+#                 full_page=True,
+#                 timeout=10000,
+#             )
 
-            logger.info("Scrolling to bottom of page...")
-            scroll_to_bottom(page)
-            sleep(2)
+#             logger.info("Scrolling to bottom of page...")
+#             scroll_to_bottom(page)
+#             sleep(2)
 
-            logger.info(f"Block crawl finished for: {domain}")
+#             logger.info(f"Block crawl finished for: {domain}")
 
-        except PlaywrightTimeoutError as e:
-            logger.error(f"Timeout on {domain}: {e}")
-        except Exception as e:
-            logger.error(f"Error crawling {domain}: {e}", exc_info=True)
-        finally:
-            # Persist any client-side cookie writes captured during the session.
-            try:
-                cookie_log = page.evaluate("window.__cookieWrites || []")
-                (output_dir / f"{domain}_cookie_writes.json").write_text(
-                    json.dumps(
-                        {"domain": domain, "writes": cookie_log},
-                        ensure_ascii=False,
-                        indent=2,
-                    ),
-                    encoding="utf-8",
-                )
-            except Exception as e:
-                logger.error(f"Error saving cookie log: {e}")
+#         except PlaywrightTimeoutError as e:
+#             logger.error(f"Timeout on {domain}: {e}")
+#         except Exception as e:
+#             logger.error(f"Error crawling {domain}: {e}", exc_info=True)
+#         finally:
+#             # Persist any client-side cookie writes captured during the session.
+#             try:
+#                 cookie_log = page.evaluate("window.__cookieWrites || []")
+#                 (output_dir / f"{domain}_cookie_writes.json").write_text(
+#                     json.dumps(
+#                         {"domain": domain, "writes": cookie_log},
+#                         ensure_ascii=False,
+#                         indent=2,
+#                     ),
+#                     encoding="utf-8",
+#                 )
+#             except Exception as e:
+#                 logger.error(f"Error saving cookie log: {e}")
 
-            try:
-                page.close()
-                context.close()
-                browser.close()
-            except Exception as e:
-                logger.error(f"Error closing browser: {e}")
+#             try:
+#                 page.close()
+#                 context.close()
+#                 browser.close()
+#             except Exception as e:
+#                 logger.error(f"Error closing browser: {e}")
