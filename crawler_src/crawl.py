@@ -9,8 +9,10 @@ Modified By: Najeh Halawani
 import argparse
 import logging
 import sys
+import threading
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 
 from crawler_src.runs import run_accept, run_reject, run_block
@@ -35,6 +37,14 @@ def parse_arguments():
         '-l',
         type=str,
         help="Path to the site list CSV (default: ./site_list.csv)"
+    )
+    
+    parser.add_argument(
+        '-w',
+        '--workers',
+        type=int,
+        default=5,
+        help="Number of parallel workers (default: 5)"
     )
     
     return parser.parse_args()
@@ -81,20 +91,58 @@ def main():
     successful = 0
     failed = 0
     
-    for idx, domain in enumerate(domains, 1):
+    # Thread-safe counter lock
+    counter_lock = threading.Lock()
+    
+    def crawl_worker(domain: str, index: int):
+        """Worker function to crawl a single domain."""
+        nonlocal successful, failed
+        thread_name = threading.current_thread().name
+        
         logger.info("="*80)
-        logger.info(f"[{idx}/{total_sites}] Crawling: {domain}")
+        logger.info(f"[{index}/{total_sites}] Crawling: {domain} (Thread: {thread_name})")
         logger.info("="*80)
         
         try:
             crawl_func(domain)
-            successful += 1
-            logger.info(f"Successfully crawled: {domain}")
+            with counter_lock:
+                successful += 1
+                current_success = successful
+                current_failed = failed
+            logger.info(f"Successfully crawled: {domain} (Thread: {thread_name})")
+            logger.info(f"Progress: {current_success} successful, {current_failed} failed out of {total_sites} total")
+            return True, domain, None
         except Exception as e:
-            failed += 1
+            with counter_lock:
+                failed += 1
+                current_success = successful
+                current_failed = failed
             logger.error(f"Failed to crawl {domain}: {e}", exc_info=True)
+            logger.info(f"Progress: {current_success} successful, {current_failed} failed out of {total_sites} total")
+            return False, domain, str(e)
+    
+    # Use ThreadPoolExecutor for parallel execution
+    logger.info(f"Starting parallel crawl with {args.workers} workers")
+    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        # Submit all crawl tasks
+        future_to_domain = {
+            executor.submit(crawl_worker, domain, idx): domain 
+            for idx, domain in enumerate(domains, 1)
+        }
         
-        logger.info(f"Progress: {successful} successful, {failed} failed")
+        # Process completed tasks as they finish
+        for future in as_completed(future_to_domain):
+            domain = future_to_domain[future]
+            try:
+                success, crawled_domain, error = future.result()
+            except Exception as e:
+                with counter_lock:
+                    failed += 1
+                logger.error(f"Unexpected error processing {domain}: {e}", exc_info=True)
+    
+    logger.info("="*80)
+    logger.info(f"Crawl completed: {successful} successful, {failed} failed out of {total_sites} total")
+    logger.info("="*80)
 
 if __name__ == "__main__":
     main()
