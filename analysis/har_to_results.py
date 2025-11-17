@@ -322,7 +322,21 @@ def extract_requests(
         duration = entry.get("time")
         if isinstance(duration, (int, float)):
             total_latency_ms += max(duration, 0.0)
-        blocked = bool(entry.get("_blocked", False) or entry.get("blocked", False))
+        blocked = bool(entry.get("_wasAborted", False))
+        if not blocked:
+            if status in (-1, 0, None):
+                blocked = True
+            elif response.get("_error"):
+                blocked = True
+            elif isinstance(response.get("statusText"), str):
+                status_text = response.get("statusText", "").lower()
+                if status_text in ("failed", "aborted", "blocked", "net::err_aborted", "net::err_blocked_by_client"):
+                    blocked = True
+        if isinstance(status, int) and status >= 400:
+            error_count += 1
+        duration = entry.get("time")
+        if isinstance(duration, (int, float)):
+            total_latency_ms += max(duration, 0.0)
         if blocked:
             blocked_count += 1
         body_size = response.get("bodySize")
