@@ -7,14 +7,12 @@ tldextract==5.1.2
 # Data handling
 pandas==2.2.3
 
-# JSON schema and typing utilities (optional but helpful)
 pydantic==2.8.2
 
-# For CLI and colored logging (optional but nice for dev UX)
 click==8.1.7
 rich==13.9.2
 
-matplotlib
-seaborn
-tld
-dnspython
+matplotlib==3.10.6
+seaborn==0.13.2
+tld==0.13.1
+dnspython==2.8.0
