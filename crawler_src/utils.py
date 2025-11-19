@@ -25,13 +25,7 @@ words = word_data["words"]
 
 def setup_logging():
     parent_dir = Path(__file__).parent.parent
-    folders = ['crawl_data_block ', 'crawl_data_accept', 'crawl_data_reject', 'analysis', 'crawler_src' ]
-    for folder in folders:
-        folder_path = parent_dir / folder
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-            logging.info(f"Created folder: {folder_path}")
-            
+    
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
     
@@ -45,8 +39,17 @@ def setup_logging():
         handlers=[
             logging.FileHandler(log_file, encoding="utf-8"),
             logging.StreamHandler(sys.stdout)
-        ]
+        ],
+        force=True
     )
+    
+    folders = ['crawl_data_block ', 'crawl_data_accept', 'crawl_data_reject', 'analysis', 'crawler_src' ]
+    for folder in folders:
+        folder_path = parent_dir / folder
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            logging.info(f"Created folder: {folder_path}")
+            
     
     return logging.getLogger(__name__)
 
